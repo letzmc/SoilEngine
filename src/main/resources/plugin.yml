@@ -1,0 +1,4 @@
+name: SoilEngine
+version: '1.0'
+main: com.github.letzmc.soilEngine.SoilEngine
+api-version: '1.21'
