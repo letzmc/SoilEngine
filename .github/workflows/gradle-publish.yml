@@ -30,25 +30,47 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
-    # Cache Gradle dependencies and wrapper
+    # Cache Gradle dependencies, wrapper, and build cache
     - name: Cache Gradle packages
       uses: actions/cache@v3
       with:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          ~/.gradle/build-cache
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
 
+    # Cache Gradle Build Cache (separate for better hit rates)
+    - name: Cache Gradle Build Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          .gradle/build-cache
+          build/
+        key: ${{ runner.os }}-gradle-build-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-build-
+
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+      with:
+        gradle-home-cache-includes: |
+          caches
+          notifications
+          jdks
+          build-cache
 
     - name: Make gradlew executable
       run: chmod +x gradlew
 
+    # Warm up Gradle and JVM
+    - name: Gradle Info (Warmup)
+      run: ./gradlew --version --no-daemon
+
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew build --build-cache --parallel
 
     # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
     # the publishing section of your build.gradle

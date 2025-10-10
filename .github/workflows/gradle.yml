@@ -29,16 +29,28 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Cache Gradle dependencies and wrapper
+    # Cache Gradle dependencies, wrapper, and build cache
     - name: Cache Gradle packages
       uses: actions/cache@v3
       with:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          ~/.gradle/build-cache
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
+
+    # Cache Gradle Build Cache (separate for better hit rates)
+    - name: Cache Gradle Build Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          .gradle/build-cache
+          build/
+        key: ${{ runner.os }}-gradle-build-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-build-
 
     # Configure Gradle for optimal use in GitHub Actions, including caching of downloaded dependencies.
     # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
@@ -46,12 +58,21 @@ jobs:
       uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
       with:
         cache-read-only: ${{ github.event_name == 'pull_request' }}
+        gradle-home-cache-includes: |
+          caches
+          notifications
+          jdks
+          build-cache
 
     - name: Make gradlew executable
       run: chmod +x gradlew
 
+    # Warm up Gradle and JVM
+    - name: Gradle Info (Warmup)
+      run: ./gradlew --version --no-daemon
+
     - name: Build with Gradle Wrapper
-      run: ./gradlew build
+      run: ./gradlew build --build-cache --parallel
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
     # If your project does not have the Gradle Wrapper configured, you can use the following configuration to run Gradle with a specified version.

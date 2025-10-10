@@ -7,6 +7,13 @@ plugins {
 group = 'com.github.letzmc'
 version = '1.0.2'
 
+// Enable Gradle Build Cache for faster builds
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.incremental = true
+    }
+}
+
 repositories {
     mavenCentral()
     maven {
