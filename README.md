@@ -51,6 +51,22 @@ dependencies {
 
 SoilEngine cung cấp hệ thống Config Manager mạnh mẽ cho phép tự động serialize và deserialize các đối tượng Java sang/từ các file cấu hình YAML.
 
+## Loại Config
+
+Config Manager hỗ trợ 2 loại config chính:
+
+### Config Tĩnh (Static Config)
+- Sử dụng `.target(Class.class)` 
+- Làm việc với các **static fields** trong class
+- Thích hợp cho việc tạo file config chính cho plugin
+- Dữ liệu được lưu trực tiếp vào static fields của class
+
+### Config Động (Dynamic Config)  
+- Sử dụng `.target(objectInstance)`
+- Làm việc với instance của object
+- **Thường được dùng như sub-config bên trong config tĩnh**
+- Không cần khởi tạo riêng với `.create()` và `.target()`
+
 ### 1. Tạo Configuration Classes
 
 ```java
@@ -74,23 +90,70 @@ public class ItemTemplatesConfig {
 
 ### 2. Khởi tạo ConfigManager
 
+#### Config Tĩnh (Static Config)
+```java
+@ConfigMappable  
+public class MainConfig {
+    public static String serverName = "MyServer";
+    public static int maxPlayers = 100;
+    public static List<String> allowedCommands = Arrays.asList("help", "info");
+}
+
+// Khởi tạo với Class
+ConfigManager mainConfig = ConfigManager
+    .create(plugin, "config.yml")
+    .target(MainConfig.class);  // Sử dụng Class
+```
+
+#### Config Động (Dynamic Config) - Sub-config
+```java
+@ConfigMappable
+public class ItemTemplate {
+    @ConfigPath
+    public String id = "default_item";
+    public String name = "Untitled Item";
+    public Material material = Material.IRON_SWORD;
+    // ... các field khác
+}
+
+@ConfigMappable  
+public class MainConfig {
+    public static String serverName = "MyServer";
+    public static int maxPlayers = 100;
+    
+    // Config động như sub-config
+    public static ItemTemplate defaultItem = new ItemTemplate();
+    public static List<ItemTemplate> itemTemplates = new ArrayList<>();
+}
+
+// Chỉ cần khởi tạo config tĩnh chính
+ConfigManager mainConfig = ConfigManager
+    .create(plugin, "config.yml")
+    .target(MainConfig.class);  // Sub-configs sẽ được xử lý tự động
+```
+
+#### Sử dụng trong Module
 ```java
 public class ConfigModule extends Module {
-    private final ConfigManager templateConfig;
     private final ConfigManager mainConfig;
 
     public ConfigModule(AeroPlugin plugin) {
         super(plugin);
         
-        // Tạo ConfigManager cho file item_templates.yml
-        templateConfig = ConfigManager
-                .create(plugin, "item_templates.yml")
-                .target(ItemTemplatesConfig.class);
-                
-        // Tạo ConfigManager cho file config.yml mặc định  
+        // Chỉ cần khởi tạo config tĩnh chính
+        // Config động (sub-configs) sẽ được xử lý tự động
         mainConfig = ConfigManager
                 .create(plugin, "config.yml")
                 .target(MainConfig.class);
+    }
+    
+    @Override
+    public void onEnable() {
+        mainConfig.saveDefaults().load();
+        
+        // Truy cập sub-configs thông qua static fields
+        String itemName = MainConfig.defaultItem.name;
+        List<ItemTemplate> templates = MainConfig.itemTemplates;
     }
 }
 ```
@@ -127,25 +190,69 @@ ConfigManager.create(plugin, "config.yml")
 
 ### 5. Ví dụ hoàn chỉnh
 
+#### Config Tĩnh - File config chính
 ```java
 @ConfigMappable
 public class MainConfig {
     @Comment("Tên server hiển thị trong tin nhắn")
-    public String serverName = "MyServer";
+    public static String serverName = "MyServer";
     
-    @ConfigName("max_players")
-    public int maxPlayers = 100;
+    @ConfigName("max_players") 
+    public static int maxPlayers = 100;
     
-    public List<String> allowedCommands = Arrays.asList("help", "info");
+    public static List<String> allowedCommands = Arrays.asList("help", "info");
     
     @ConfigPath
-    public String configVersion = "1.0";
+    public static String configVersion = "1.0";
 }
 
-// Cách sử dụng
+// Sử dụng Config Tĩnh
 ConfigManager config = ConfigManager
     .create(plugin, "config.yml")
-    .target(MainConfig.class)
+    .target(MainConfig.class)  // Truyền Class
     .saveDefaults()  // Tạo file với giá trị mặc định
-    .load();         // Load giá trị từ file
+    .load();         // Load giá trị vào static fields
+```
+
+#### Config Động - Sub-config trong config tĩnh
+```java
+@ConfigMappable
+public class ItemTemplate {
+    @ConfigPath
+    public String id = "default_item";
+    
+    @Comment("Tên hiển thị của item")
+    public String name = "Untitled Item";
+    
+    public Material material = Material.IRON_SWORD;
+    public ItemTier tier = ItemTier.B;
+}
+
+@ConfigMappable
+public class GameConfig {
+    @Comment("Cài đặt server")
+    public static String serverName = "MyServer";
+    
+    @Comment("Template item mặc định")
+    public static ItemTemplate defaultItem = new ItemTemplate();
+    
+    @Comment("Danh sách các template items")
+    public static List<ItemTemplate> itemTemplates = Arrays.asList(
+        new ItemTemplate() {{ id = "sword"; name = "Basic Sword"; }},
+        new ItemTemplate() {{ id = "bow"; name = "Basic Bow"; }}
+    );
+}
+
+// Sử dụng - chỉ cần một ConfigManager
+ConfigManager config = ConfigManager
+    .create(plugin, "config.yml")
+    .target(GameConfig.class)  // Sub-configs được xử lý tự động
+    .saveDefaults()
+    .load();
+
+// Truy cập sub-config
+String defaultItemName = GameConfig.defaultItem.name;
+GameConfig.itemTemplates.forEach(template -> 
+    plugin.getLogger().info("Item: " + template.name)
+);
 ```
