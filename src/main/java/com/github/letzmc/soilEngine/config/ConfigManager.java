@@ -1,5 +1,6 @@
 package com.github.letzmc.soilEngine.config;
 
+import com.github.letzmc.soilEngine.SoilEngine;
 import com.github.letzmc.soilEngine.config.conversion.ObjectConverter;
 import com.github.letzmc.soilEngine.config.conversion.StaticRootConverter;
 import com.github.letzmc.soilEngine.config.conversion.TypeConverter;
@@ -7,6 +8,7 @@ import com.github.letzmc.soilEngine.config.data.ConfigurationSectionDataHolder;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
@@ -16,15 +18,13 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 /**
- * Serializes and deserializes configuration data into objects and fields
+ * Lớp cơ sở trừu tượng để quản lý serialize/deserialize config
  */
-public class ConfigManager {
+public abstract class ConfigManager {
 
     private static Boolean commentsSupported;
 
-    /**
-     * @return Whether comments are supported in this version
-     */
+    /** Kiểm tra hỗ trợ comments */
     public static boolean areCommentsSupported() {
         if (commentsSupported == null) {
             commentsSupported = Arrays.stream(ConfigurationSection.class.getMethods()).anyMatch(m -> m.getName().equals("setComments"));
@@ -32,123 +32,81 @@ public class ConfigManager {
         return commentsSupported;
     }
 
-    /**
-     * Creates a ConfigManager targetting a specific config file, which will be created if it does not exist
-     *
-     * @param plugin The plugin the ConfigManager belongs to
-     * @param file   The config file to manage
-     * @return The ConfigManager
-     */
-    public static ConfigManager create(Plugin plugin, File file) {
-        return new ConfigManager(plugin, file);
+    /** Tạo FileConfigManager cho file cụ thể */
+    public static FileConfigManager create(Plugin plugin, File file) {
+        return FileConfigManager.create(plugin, file);
     }
 
-    /**
-     * Creates a ConfigManager targetting a specific config file, which will be created if it does not exist
-     *
-     * @param plugin The plugin the ConfigManager belongs to
-     * @param path   The config file to manage
-     * @return The ConfigManager
-     */
-    public static ConfigManager create(Plugin plugin, Path path) {
-        return create(plugin, path.toFile());
+    /** Tạo FileConfigManager cho path cụ thể */
+    public static FileConfigManager create(Plugin plugin, Path path) {
+        return FileConfigManager.create(plugin, path);
     }
 
-    /**
-     * Creates a ConfigManager for a file in a plugin's data folder
-     *
-     * @param plugin     The plugin whose data folder should be used
-     * @param configName The name of the config file to manage
-     * @return The ConfigManager
-     */
-    public static ConfigManager create(Plugin plugin, String configName) {
-        return create(plugin, plugin.getDataFolder().toPath().resolve(configName));
+    /** Tạo FileConfigManager trong thư mục plugin */
+    public static FileConfigManager create(Plugin plugin, String configName) {
+        return FileConfigManager.create(plugin, configName);
     }
 
-    /**
-     * Creates a ConfigManager for the default config in a plugin's data folder, called config.yml
-     *
-     * @param plugin The plugin whose data folder should be used
-     * @return The ConfigManager
-     */
-    public static ConfigManager create(Plugin plugin) {
-        return create(plugin, "config.yml");
+    /** Tạo FileConfigManager mặc định (config.yml) */
+    public static FileConfigManager create(Plugin plugin) {
+        return FileConfigManager.create(plugin);
     }
 
-    private FileConfiguration config;
+    /** Tạo ItemConfigManager cho ItemStack */
+    public static ItemConfigManager create(Plugin plugin, ItemStack item) {
+        return ItemConfigManager.create(plugin, item);
+    }
+
+    /** Tạo ItemConfigManager cho ItemStack (không cần plugin) */
+    public static ItemConfigManager create(ItemStack item) {
+        return ItemConfigManager.create(SoilEngine.getInstance(), item);
+    }
+
     private ConfigurationSectionDataHolder holder;
-    private File file;
     private TypeConverter<?> converter;
     private Object target;
     private Class<?> targetClass;
     private ConversionManager conversionManager;
 
-    private ConfigManager(Plugin plugin, File file) {
+    protected ConfigManager(Plugin plugin) {
         conversionManager = new ConversionManager(plugin);
-        this.file = file;
-        file.getParentFile().mkdirs();
-        if (file.exists()) {
-            setConfig(YamlConfiguration.loadConfiguration(file));
-        } else {
-            setConfig(new YamlConfiguration());
-        }
+        initializeDataSource();
     }
 
-    /**
-     * @return The ConversionManager responsible for storing and creating converters for this ConfigManager
-     */
+    /** Khởi tạo nguồn dữ liệu */
+    protected abstract void initializeDataSource();
+
+    /** Đọc config từ nguồn */
+    protected abstract FileConfiguration loadConfiguration();
+
+    /** Ghi config ra nguồn */
+    protected abstract void saveConfiguration(FileConfiguration config);
+
     public ConversionManager getConversionManager() {
         return conversionManager;
     }
 
-    /**
-     * Sets the ConversionManager responsible for storing and creating converters for this ConfigManager
-     *
-     * @param conversionManager The ConversionManager
-     */
     public void setConversionManager(ConversionManager conversionManager) {
         this.conversionManager = conversionManager;
     }
 
-    /**
-     * Registers a string converter to this ConfigManager
-     *
-     * @param clazz  The class type the converter is for
-     * @param loader A function to convert a string to the given type
-     * @param saver  A function to convert the given type to a string
-     * @param <T>    The type
-     * @return This ConfigManager
-     */
+    /** Thêm string converter */
     public <T> ConfigManager addConverter(Class<T> clazz, Function<String, T> loader, Function<T, String> saver) {
         conversionManager.addConverter(clazz, loader, saver);
         return this;
     }
 
-    /**
-     * Registers a converter to this ConfigManager
-     *
-     * @param type      The type the converter is for
-     * @param converter The converter
-     * @param <T>       The type
-     * @return This ConfigManager
-     */
+    /** Thêm type converter */
     public <T> ConfigManager addConverter(ConfigType<T> type, TypeConverter<T> converter) {
         conversionManager.addConverter(type, converter);
         return this;
     }
 
-    private void setConfig(FileConfiguration config) {
-        this.config = config;
+    protected void setConfig(FileConfiguration config) {
         this.holder = new ConfigurationSectionDataHolder(config);
     }
 
-    /**
-     * Specifies the given Object to load config values to and save config values from. The Object
-     * must be from a ConfigMappable class, and all of its non-transient fields will be worked with.
-     *
-     * @param obj The Object to operate on
-     * @return This ConfigManager
-     */
+    /** Đặt target object để load/save config */
     public ConfigManager target(Object obj) {
         if (target != null || targetClass != null) {
             throw new IllegalStateException("ConfigManager already has a target");
@@ -158,13 +116,7 @@ public class ConfigManager {
         return this;
     }
 
-    /**
-     * Specifies the given Class to load config values to and save config values from. The Class's
-     * static non-transient fields will be worked with.
-     *
-     * @param clazz The Class to operate on
-     * @return This ConfigManager
-     */
+    /** Đặt target class (static fields) để load/save config */
     public ConfigManager target(Class<?> clazz) {
         if (target != null || targetClass != null) {
             throw new IllegalStateException("ConfigManager already has a target");
@@ -174,31 +126,19 @@ public class ConfigManager {
         return this;
     }
 
-    /**
-     * Saves all of the values from the target to config
-     *
-     * @return This ConfigManager
-     */
+    /** Lưu tất cả giá trị từ target ra config */
     public ConfigManager save() {
         save(converter, true);
         return this;
     }
 
-    /**
-     * Saves only values which are not already specified in config
-     *
-     * @return This ConfigManager
-     */
+    /** Chỉ lưu giá trị chưa có trong config */
     public ConfigManager saveDefaults() {
         save(converter, false);
         return this;
     }
 
-    /**
-     * Loads all values from the current in-memory config into the target
-     *
-     * @return This ConfigManager
-     */
+    /** Đọc tất cả giá trị từ config vào target */
     public ConfigManager load() {
         load(converter);
         return this;
@@ -208,34 +148,47 @@ public class ConfigManager {
         converter.loadFrom(holder, null, (T) target);
     }
 
-    /**
-     * Loads the config from disk, then loads all values into the target
-     *
-     * @return This ConfigManager
-     */
+    /** Tải lại config từ nguồn và load vào target */
     public ConfigManager reload() {
-        setConfig(YamlConfiguration.loadConfiguration(file));
+        setConfig(loadConfiguration());
         return load();
     }
 
     private <T> void save(TypeConverter<T> converter, boolean overwrite) {
         holder.clearComments();
         converter.saveTo((T) target, holder, null, overwrite);
+        
+        // Create a new config based on current data
+        FileConfiguration config = new YamlConfiguration();
+        
+        // Copy all data from holder to config - we need to copy the underlying section
+        if (holder.unwrap() instanceof ConfigurationSection) {
+            ConfigurationSection sourceSection = (ConfigurationSection) holder.unwrap();
+            copySection(sourceSection, config);
+        }
+        
         if (areCommentsSupported()) {
             holder.getComments().forEach(config::setComments);
         }
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+        
+        saveConfiguration(config);
+    }
+
+    /** Sao chép tất cả giá trị từ section nguồn sang target */
+    private void copySection(ConfigurationSection source, ConfigurationSection target) {
+        for (String key : source.getKeys(false)) {
+            Object value = source.get(key);
+            if (value instanceof ConfigurationSection) {
+                ConfigurationSection targetSubsection = target.createSection(key);
+                copySection((ConfigurationSection) value, targetSubsection);
+            } else {
+                target.set(key, value);
+            }
         }
     }
 
-    /**
-     * @return The configuration file wrapped by this ConfigManager
-     */
     public FileConfiguration getConfig() {
-        return config;
+        return loadConfiguration();
     }
 
 }
