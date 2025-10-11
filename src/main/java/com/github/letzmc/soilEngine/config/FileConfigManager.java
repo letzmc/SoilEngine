@@ -13,7 +13,7 @@ import java.nio.file.Path;
  */
 public class FileConfigManager extends ConfigManager {
 
-    private File file;
+    private final File file;
 
     private FileConfigManager(Plugin plugin, File file) {
         super(plugin);

@@ -16,7 +16,7 @@ import java.io.StringReader;
  */
 public class ItemConfigManager extends ConfigManager {
 
-    private ItemStack item;
+    private final ItemStack item;
     private NamespacedKey configKey;
 
     private ItemConfigManager(Plugin plugin, ItemStack item) {
@@ -24,8 +24,6 @@ public class ItemConfigManager extends ConfigManager {
         this.item = item;
         this.configKey = new NamespacedKey(plugin, "config_data");
     }
-
-
 
     @Override
     protected void initializeDataSource() {
@@ -50,7 +48,6 @@ public class ItemConfigManager extends ConfigManager {
         try {
             config.load(new StringReader(configData));
         } catch (Exception e) {
-            e.printStackTrace();
             return new YamlConfiguration();
         }
         
@@ -89,12 +86,6 @@ public class ItemConfigManager extends ConfigManager {
 
     public NamespacedKey getConfigKey() {
         return configKey;
-    }
-
-    /** Đặt NamespacedKey tùy chỉnh để lưu config */
-    public ItemConfigManager setConfigKey(NamespacedKey configKey) {
-        this.configKey = configKey;
-        return this;
     }
 
     /** Đặt key bằng tên (sử dụng plugin hiện tại) */
