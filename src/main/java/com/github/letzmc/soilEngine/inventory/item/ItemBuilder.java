@@ -12,7 +12,7 @@ import com.github.letzmc.soilEngine.inventory.placeholder.ComponentPlaceholder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import nade.empty.utils.parser.MaterialParser;
+//import nade.empty.utils.parser.MaterialParser;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -74,7 +74,7 @@ public class ItemBuilder {
      * @return chính builder hiện tại
      */
     public ItemBuilder material(String material, Material def) {
-        this.material = MaterialParser.parse(material, def);
+        //this.material = MaterialParser.parse(material, def);
         return this;
     }
 
