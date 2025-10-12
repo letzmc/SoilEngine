@@ -2,8 +2,15 @@ package com.github.letzmc.soilEngine.log;
 
 import com.github.letzmc.soilEngine.SoilEngine;
 import com.github.letzmc.soilEngine.hook.PlaceholderAPIHook;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class MessageLogger {
     public final MessageConfig config;
@@ -14,45 +21,46 @@ public class MessageLogger {
         this.config = new MessageConfig(plugin);
     }
 
+    public void log(String message, @Nullable CommandSender audience, Function<String, String> parser, Map<String, String> replacements) {
+        if (audience == null) audience = Bukkit.getConsoleSender();
+        audience.sendMessage(config.get(message, i -> {
+            if (replacements != null) {
+                for (var entry : replacements.entrySet()) {
+                    i = i.replace("{"+entry.getKey()+"}", entry.getValue());
+                }
+            }
+            if (parser != null) i = parser.apply(i);
+            return i;
+        }));
+    }
+
+    public void log(String message, CommandSender audience, Function<String, String> parser) {
+        log(message, audience, parser, null);
+    }
+
+    public void log(String message, CommandSender audience, Map<String, String> replacements) {
+        log(message, audience, null, replacements);
+    }
+
+    public void log(String message, Function<String, String> parser, Map<String, String> replacements) {
+        log(message, null, parser, replacements);
+    }
+    
+    public void log(String message, CommandSender audience) {
+        log(message, audience, null, null);
+    }
+
+    public void log(String message, Function<String, String> parser) {
+        log(message, null, parser, null);
+    }
+
+    public void log(String message, Map<String, String> replacements) {
+        log(message, null, null, replacements);
+    }
+
     public void log(String message) {
-        plugin.getComponentLogger().info(config.get(message));
+        log(message, null, null, null);
     }
 
-    public void log(String message, String param, String value) {
-        plugin.getComponentLogger().info(config.get(message, param, value));
-    }
 
-    public void log(String message,
-                   String param1, String value1,
-                   String param2, String value2) {
-        plugin.getComponentLogger().info(config.get(message, param1, value1, param2, value2));
-    }
-
-    public void log(String message,
-                   String param1, String value1,
-                   String param2, String value2,
-                   String param3, String value3) {
-        plugin.getComponentLogger().info(config.get(message, param1, value1, param2, value2, param3, value3));
-    }
-
-    public void log(Player player, String message) {
-        player.sendMessage(config.get(message, str -> PlaceholderAPIHook.parse(player, str)));
-    }
-
-    public void log(Player player, String message, String param, String value) {
-        player.sendMessage(config.get(message, param, value, str -> PlaceholderAPIHook.parse(player, str)));
-    }
-
-    public void log(Player player, String message,
-                   String param1, String value1,
-                   String param2, String value2) {
-        player.sendMessage(config.get(message, param1, value1, param2, value2, str -> PlaceholderAPIHook.parse(player, str)));
-    }
-
-    public void log(Player player, String message,
-                   String param1, String value1,
-                   String param2, String value2,
-                   String param3, String value3) {
-        player.sendMessage(config.get(message, param1, value1, param2, value2, param3, value3, str -> PlaceholderAPIHook.parse(player, str)));
-    }
 }

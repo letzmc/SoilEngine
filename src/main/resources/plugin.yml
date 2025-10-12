@@ -4,3 +4,4 @@ main: com.github.letzmc.soilEngine.SoilEngine
 api-version: '1.21'
 softdepend:
   - PlaceholderAPI
+  - ItemsAdder

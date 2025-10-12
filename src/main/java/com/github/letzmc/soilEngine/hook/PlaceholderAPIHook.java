@@ -1,7 +1,7 @@
 package com.github.letzmc.soilEngine.hook;
 
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
+import org.bukkit.OfflinePlayer;
 
 public class PlaceholderAPIHook {
 
@@ -9,7 +9,7 @@ public class PlaceholderAPIHook {
         return Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null;
     }
 
-    public static String parse(Player player, String text) {
+    public static String parse(OfflinePlayer player, String text) {
         if (iaAvailable()) { return text; }
         return me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(player, text);
     }

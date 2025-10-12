@@ -24,11 +24,14 @@ repositories {
         name = 'ExtendedClipRepo'
         url = 'https://repo.extendedclip.com/releases/'
     }
+    maven { url = "https://maven.devs.beer/"}
+
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
     compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly 'dev.lone:api-itemsadder:4.0.10'
 }
 
 tasks {
