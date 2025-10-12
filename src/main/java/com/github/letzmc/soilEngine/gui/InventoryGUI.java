@@ -1,7 +1,7 @@
 package com.github.letzmc.soilEngine.gui;
 
 import com.github.letzmc.soilEngine.SoilEngine;
-import net.kyori.adventure.text.Component;
+import com.github.letzmc.soilEngine.log.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -16,15 +16,9 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * GUI inventory với hệ thống button và slot mở
@@ -36,19 +30,18 @@ public class InventoryGUI implements Listener {
     public static final ItemStack FILLER;
 
     static {
-        FILLER = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-        FILLER.editMeta(meta -> meta.displayName(Component.text(" ")));
+        FILLER = ItemUtil.gen(Material.GRAY_STAINED_GLASS_PANE, " ");
     }
 
     private final Inventory inventory;
-    private Set<Integer> openSlots = new LinkedHashSet<>();
-    private List<Integer> excludedFillerSlots = new ArrayList<>();
+    private final Set<Integer> openSlots = new LinkedHashSet<>();
+    private final List<Integer> excludedFillerSlots = new ArrayList<>();
     private Runnable onDestroy;
     private BiConsumer<InventoryClickEvent, List<Integer>> onClickOpenSlot = (e, i) -> {
     };
     private Consumer<InventoryDragEvent> onDragOpenSlot = e -> {
     };
-    private Map<Integer, ItemButton> buttons = new HashMap<>();
+    private final Map<Integer, ItemButton> buttons = new HashMap<>();
 
     private boolean returnItems = true;
     private boolean destroyOnClose = true;
@@ -59,9 +52,14 @@ public class InventoryGUI implements Listener {
         Bukkit.getPluginManager().registerEvents(this, SoilEngine.getInstance());
     }
 
+
     /** Tạo GUI mới với kích thước và tên */
+    public InventoryGUI(int size, String name, Player owner) {
+        this(Bukkit.createInventory(null, size, TextUtil.parse(owner, name)));
+    }
+
     public InventoryGUI(int size, String name) {
-        this(Bukkit.createInventory(null, size, name));
+        this(size, name, null);
     }
 
     /** Lấy inventory được wrap */
@@ -267,8 +265,8 @@ public class InventoryGUI implements Listener {
 
     @EventHandler
     public void onDrag(InventoryDragEvent e) {
-        List<Integer> slots = e.getRawSlots().stream().filter(s -> getInventory(e.getView(), s).equals(inventory)).collect(Collectors.toList());
-        if (slots.size() == 0) {
+        List<Integer> slots = e.getRawSlots().stream().filter(s -> getInventory(e.getView(), s).equals(inventory)).toList();
+        if (slots.isEmpty()) {
             return;
         }
         if (!openSlots.containsAll(slots)) {
@@ -287,14 +285,14 @@ public class InventoryGUI implements Listener {
         if (!inventory.equals(e.getView().getTopInventory())) {
             return;
         }
-        if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR && !e.getClickedInventory().equals(inventory)) {
+        if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR && !Objects.equals(e.getClickedInventory(), inventory)) {
             e.setCancelled(true);
             return;
         }
         if (!inventory.equals(e.getClickedInventory()) && e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            if (openSlots.size() > 0) {
+            if (!openSlots.isEmpty()) {
                 Map<Integer, ItemStack> slots = new HashMap<>();
-                int amount = e.getCurrentItem().getAmount();
+                int amount = Objects.requireNonNull(e.getCurrentItem()).getAmount();
                 for (int slot : openSlots) {
                     if (amount <= 0) {
                         break;
@@ -317,7 +315,7 @@ public class InventoryGUI implements Listener {
                         slots.put(slot, clone);
                     }
                 }
-                if (slots.size() == 0) {
+                if (slots.isEmpty()) {
                     return;
                 }
                 onClickOpenSlot.accept(e, new ArrayList<>(slots.keySet()));
@@ -329,9 +327,7 @@ public class InventoryGUI implements Listener {
                 item.setAmount(amount);
                 e.setCurrentItem(item);
                 slots.forEach(inventory::setItem);
-                Bukkit.getScheduler().scheduleSyncDelayedTask(SoilEngine.getInstance(), () -> {
-                    ((Player) e.getWhoClicked()).updateInventory();
-                });
+                Bukkit.getScheduler().scheduleSyncDelayedTask(SoilEngine.getInstance(), () -> ((Player) e.getWhoClicked()).updateInventory());
                 return;
             }
             e.setCancelled(true);
