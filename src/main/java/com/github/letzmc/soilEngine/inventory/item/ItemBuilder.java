@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import com.github.letzmc.soilEngine.inventory.placeholder.ComponentPlaceholder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
