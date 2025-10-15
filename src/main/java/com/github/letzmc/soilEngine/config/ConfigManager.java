@@ -112,6 +112,32 @@ public abstract class ConfigManager {
             throw new IllegalStateException("ConfigManager already has a target");
         }
         target = obj;
+
+        // Thêm cơ chế xử ký đặc biệt cho map
+        if (obj instanceof java.util.Map) {
+            conversionManager.addConverter(new ConfigType<>(java.util.Map.class), new TypeConverter<java.util.Map<String, Object>>() {
+                @Override
+                public void loadFrom(ConfigurationSectionDataHolder section, String key, java.util.Map<Object, Object> target) {
+                    ConfigurationSection subSection = section.getConfigurationSection(key);
+                    if (subSection == null) return;
+                    for (String subKey : subSection.getKeys(false)) {
+                        target.put(subKey, subSection.get(subKey));
+                    }
+                }
+
+                @Override
+                public void saveTo(java.util.Map<Object, Object> source, ConfigurationSectionDataHolder section, String key, boolean overwrite) {
+                    ConfigurationSection subSection = section.getOrCreateSection(key);
+                    for (Object mapKey : source.keySet()) {
+                        Object value = source.get(mapKey);
+                        if (overwrite || !subSection.contains(mapKey.toString())) {
+                            subSection.set(mapKey.toString(), value);
+                        }
+                    }
+                }
+            });
+        }
+
         converter = ObjectConverter.create(conversionManager, new ConfigType<>(obj.getClass()));
         return this;
     }
