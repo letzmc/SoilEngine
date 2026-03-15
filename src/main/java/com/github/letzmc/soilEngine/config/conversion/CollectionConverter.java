@@ -10,6 +10,8 @@ import java.util.function.Supplier;
 
 /**
  * A converter which saves and loads contents of a collection
+ *
+ * @author Redempt
  */
 public class CollectionConverter {
 

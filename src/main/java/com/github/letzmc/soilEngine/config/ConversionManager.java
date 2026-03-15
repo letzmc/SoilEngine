@@ -1,10 +1,10 @@
 package com.github.letzmc.soilEngine.config;
 
+import org.bukkit.plugin.Plugin;
 import com.github.letzmc.soilEngine.config.annotations.ConfigMappable;
 import com.github.letzmc.soilEngine.config.annotations.ConfigSubclassable;
 import com.github.letzmc.soilEngine.config.conversion.*;
 import com.github.letzmc.soilEngine.config.instantiation.Instantiator;
-import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Modifier;
 import java.util.Collection;

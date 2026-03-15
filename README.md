@@ -22,7 +22,7 @@ Sau đó thêm dependency:
 <dependency>
     <groupId>com.github.letzmc</groupId>
     <artifactId>soilengine</artifactId>
-    <version>1.0</version>
+    <version>1.1.2</version>
 </dependency>
 ```
 
@@ -43,7 +43,7 @@ Sau đó thêm dependency:
 
 ```groovy
 dependencies {
-    implementation 'com.github.letzmc:soilengine:1.0'
+    implementation 'com.github.letzmc:soilengine:1.1.2'
 }
 ```
 
