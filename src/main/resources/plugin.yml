@@ -1,5 +1,5 @@
 name: SoilEngine
-version: '1.0'
+version: '${version}'
 main: com.github.letzmc.soilEngine.SoilEngine
 api-version: '1.21'
 softdepend:

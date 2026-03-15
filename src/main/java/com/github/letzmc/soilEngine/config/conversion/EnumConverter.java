@@ -2,6 +2,8 @@ package com.github.letzmc.soilEngine.config.conversion;
 
 /**
  * A converter which converts enum values
+ *
+ * @author Redempt
  */
 public class EnumConverter {
 
